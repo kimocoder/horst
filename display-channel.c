@@ -22,6 +22,7 @@
 #include <stdlib.h>
 
 #include <uwifi/wlan_util.h>
+#include <uwifi/log.h>
 
 #include "display.h"
 #include "main.h"
@@ -46,7 +47,7 @@ void update_channel_win(WINDOW *win)
 		wattron(win, A_BOLD);
 		mvwprintw(win, 2, col, "%s: %s",
 			col == 2 ? "2.4GHz" : "5GHz",
-			uwifi_channel_width_string(bp->max_chan_width, -1));
+			uwifi_channel_width_string(bp->max_chan_width));
 
 		if (bp->streams_rx || bp->streams_tx)
 			wprintw(win, " %dx%d", bp->streams_rx, bp->streams_tx);
@@ -167,7 +168,7 @@ bool channel_input(WINDOW *win, int c)
 		if ((new_idx >= 0 && new_idx != conf.intf.channel_idx) ||
 		    conf.intf.channel_set.width != conf.intf.channel.width ||
 		    set_ht40plus != uwifi_channel_is_ht40plus(&conf.intf.channel)) {
-			conf.intf.channel_set.center_freq = conf.intf.channel_set.freq + (set_ht40plus ? 10 : -10);
+			uwifi_channel_fix_center_freq(&conf.intf.channel_set, set_ht40plus);
 			/* some setting changed */
 			if (conf.serveraddr[0] == '\0') {
 				/* server */
@@ -181,7 +182,7 @@ bool channel_input(WINDOW *win, int c)
 				/* client */
 				conf.intf.channel_idx = new_idx;
 				conf.intf.channel = conf.intf.channel_set;
-				printlog(LOG_INFO, "Sending channel config to server");
+				LOG_INF("Sending channel config to server");
 				net_send_channel_config();
 			}
 		}

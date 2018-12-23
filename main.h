@@ -34,10 +34,6 @@
 
 #define CONFIG_FILE "/etc/horst.conf"
 
-#ifndef DO_DEBUG
-#define DO_DEBUG 0
-#endif
-
 #define MAX_HISTORY		255
 #define MAX_RATES		44	/* 12 legacy rates and 32 MCS */
 #define MAX_FSTYPE		0xff
@@ -170,7 +166,7 @@ extern struct node_names_info node_names;
 extern struct timespec time_mono;
 extern struct timespec time_real;
 
-extern struct list_head nodes;
+extern struct list_head essids;
 
 void free_lists(void);
 void init_spectrum(void);

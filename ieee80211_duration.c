@@ -15,10 +15,12 @@
  */
 
 #include <stdbool.h>
+#include <math.h>
 
 #include <uwifi/platform.h>
 #include <uwifi/wlan80211.h>
 #include <uwifi/util.h>
+#include <uwifi/log.h>
 
 #include "main.h"
 #include "ieee80211_duration.h"
@@ -37,11 +39,11 @@ static inline bool ieee80211_is_erp_rate(int phymode, int rate)
 	if (phymode & PHY_FLAG_G) {
 		if (rate != 10 && rate != 20 &&
 		    rate != 55 && rate != 110) {
-			DBG_PRINT("erp\n");
+			LOG_DBG("erp");
 			return true;
 		}
 	}
-	DBG_PRINT("no erp\n");
+	LOG_DBG("no erp");
 	return false;
 }
 
@@ -53,7 +55,7 @@ static int get_cw_time(int cw_min, int cw_max, int retries, int slottime)
 	if(cw >  cw_max)
 		cw = cw_max;
 
-	DBG_PRINT("CW min %d max %d ret %d = %d\n", cw_min, cw_max, retries, cw);
+	LOG_DBG("CW min %d max %d ret %d = %d", cw_min, cw_max, retries, cw);
 	return (cw * slottime) / 2;
 }
 
@@ -83,10 +85,10 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 	 * DIV_ROUND_UP() operations.
 	 */
 
-	DBG_PRINT("DUR mode %d, len %d, rate %d, shortpre %d shortslot %d type %x UP %d\n", phymode, (int)len, rate, short_preamble, shortslot, type, qos_class);
+	LOG_DBG("DUR mode %d, len %d, rate %d, shortpre %d shortslot %d type %x UP %d", phymode, (int)len, rate, short_preamble, shortslot, type, qos_class);
 
 	if (phymode == PHY_FLAG_A || erp) {
-		DBG_PRINT("OFDM\n");
+		LOG_DBG("OFDM");
 		/*
 		 * OFDM:
 		 *
@@ -107,7 +109,7 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 		dur += 4 * DIV_ROUND_UP((16 + 8 * (len + 4) + 6) * 10,
 					4 * rate); /* T_SYM x N_SYM */
 	} else {
-		DBG_PRINT("CCK\n");
+		LOG_DBG("CCK");
 		/*
 		 * 802.11b or 802.11g with 802.11b compatibility:
 		 * 18.3.4: TXTIME = PreambleLength + PLCPHeaderTime +
@@ -127,7 +129,7 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 	if (type == WLAN_FRAME_CTS ||
 	    type == WLAN_FRAME_ACK) {
 		//TODO: also fragments
-		DBG_PRINT("DUR SIFS\n");
+		LOG_DBG("DUR SIFS");
 		dur += sifs;
 	}
 	else if (type == WLAN_FRAME_BEACON) {
@@ -136,23 +138,23 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 		dur += (slottime * 1) / 2; /* contention */
 	}
 	else if (WLAN_FRAME_IS_DATA(type) && last_was_cts) {
-		DBG_PRINT("DUR LAST CTS\n");
+		LOG_DBG("DUR LAST CTS");
 		dur += sifs;
 	}
 	else if (type == WLAN_FRAME_QDATA) {
 		unsigned char ac = ieee802_1d_to_ac[(unsigned char)qos_class];
 		dur += sifs + (ac_to_aifs[ac] * slottime); /* AIFS */
 		dur += get_cw_time(ac_to_cwmin[ac], ac_to_cwmax[ac], retries, slottime);
-		DBG_PRINT("DUR AIFS %d CWMIN %d AC %d, UP %d\n", ac_to_aifs[ac], ac_to_cwmin[ac], ac, qos_class);
+		LOG_DBG("DUR AIFS %d CWMIN %d AC %d, UP %d", ac_to_aifs[ac], ac_to_cwmin[ac], ac, qos_class);
 	}
 	else {
-		DBG_PRINT("DUR DIFS\n");
+		LOG_DBG("DUR DIFS");
 		dur += sifs + (2 * slottime); /* DIFS */
 		dur += get_cw_time(4, 10, retries, slottime);
 	}
 
 	if (type == WLAN_FRAME_CTS) {
-		DBG_PRINT("SET CTS\n");
+		LOG_DBG("SET CTS");
 		last_was_cts = 1;
 	}
 	else
@@ -160,6 +162,6 @@ int ieee80211_frame_duration(int phymode, size_t len, int rate, int short_preamb
 
 	/* TODO: Add EIFS (SIFS + ACKTXTIME) to frames with CRC errors, if we can get them */
 
-	DBG_PRINT("DUR %d\n", dur);
+	LOG_DBG("DUR %d", dur);
 	return dur;
 }

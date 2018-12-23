@@ -9,7 +9,7 @@ GNU Public License (GPL) V2
 
 * Main page: https://github.com/br101/horst
 * Issue tracker: https://github.com/br101/horst/issues
-* Download Stable (Version 5.0): https://github.com/br101/horst/archive/version-5.0.tar.gz
+* Download Stable (Version 5.1): https://github.com/br101/horst/archive/v5.1.tar.gz
 * Download Development (MASTER): https://github.com/br101/horst/tarball/master
 
 
@@ -21,7 +21,7 @@ smaller and shows different, aggregated information which is not easily
 available from other tools. It is made for debugging wireless LANs with a focus 
 on getting a quick overview instead of deep packet inspection and has special 
 features for Ad-hoc (IBSS) mode and mesh networks. It can be useful to get a 
-quick overview of what's going on on all wireless LAN channels and to identify 
+quick overview of what's going on all wireless LAN channels and to identify 
 problems.
 
 * Shows signal (RSSI) values per station, something hard to get, especially in 
@@ -40,7 +40,7 @@ problems.
 * Automatically adds and removes monitor interface
 
 `horst` is a Linux program and can be used on any wireless LAN interface which 
-supports monitor mode. The latest stable version is 5.0 from July 01 2016.
+supports monitor mode.
 
 
 ## Checkout
@@ -69,49 +69,38 @@ use:
 ## Dependencies
 
 `horst` is just a simple tool, and `libncurses` and header files is the only
-hard requirement. Recently we have added support for `nl80211` via `libnl`, so
-on Linux normally you need `libnl3` + header files as well. On Debian/Ubuntu
-based distros you can install them with:
+hard requirement as well as the `pkg-config` tool. Recently we have added support
+for `nl80211` via `libnl`, so on Linux normally you need `libnl3` + header files 
+as well. On Debian/Ubuntu based distros you can install them with:
 
-	sudo apt-get install libncurses5-dev libnl-3-dev libnl-genl-3-dev
+	sudo apt-get install libncurses5-dev libnl-3-dev libnl-genl-3-dev pkg-config
 
 
 ## Building
 
-Building is normally done with:
+Building is normally done with "make" (optional `V=1` or `DEBUG=1`). This checks out
+`libuwifi` as a submodule if necessary:
 
 	make
 
-If you have an old or proprietary WLAN driver which only knows the deprecated
-`wireless extensions` you can build `horst` with support for them:
+If you want to maintain `libuwifi` not as a submodule but in a directory outside
+of `horst` you can specify it with:
 
-	make WEXT=1
+	make LIBUWIFI=../my/path/to/libuwifi
 
-To experimentally build using libpcap (note that libpcap on Linux is not
-necessary and not recommended) use (Broken right now!):
+Should you expect on `libuwifi` in the system path (`/usr/local/include/` and
+`/usr/local/lib/` or similar) you can do:
 
-	make PCAP=1
-
-If you build on another Unix which is not Linux, you probably need to disable
-libnl:
-
-	make PCAP=1 LIBNL=0
-
-To build for Mac OSX (Broken right now!):
-
-	make OSX=1
-
-Please note that PCAP and OSX support is not so well tested and some features
-may be missing.
+	make LIBUWIFI=
 
 To install (with optional `DESTDIR=/path`):
 
-	make install
+	sudo make install
 
 
 ## Config and other files
 
-`horst` by default reads a config file `/etc/horst.conf`. The location of the file
+By default `horst` reads a config file `/etc/horst.conf`. The location of the file
 can be changed with the `-c file` command line option. See the file itself or
 `man horst.conf` for a description of the options.
 
@@ -128,25 +117,33 @@ in the config file.
 
 ## Usage notes
 
-With version 5.0 `horst` can automatically set the WLAN interface into monitor 
-mode or add a monitor interface. But you can still set the interface into 
+Starting with version 5.0 `horst` can automatically set the WLAN interface into
+monitor mode or add a monitor interface. But you can still set the interface into
 monitor mode manually before you start `horst` as well. With most standard 
 Linux (mac80211) drivers you can use the `iw` command to add an additional 
-monitor interface while you can continue to use the existing interface: `iw 
-wlan0 interface add mon0 type monitor`. (If you have to use the deprecated WEXT 
-interface can put the interface into monitor mode like this `iwconfig wlan0 
-mode monitor channel X`).
+monitor interface while you can continue to use the existing interface.
 
-Please note that if the main interface (`wlan0`) is in use, either as a client 
+	iw wlan0 interface add mon0 type monitor
+
+Please note that while the main interface (`wlan0`) is in use, either as a client
 to an AP, in Ad-hoc mode, or creating an AP, the wifi driver does not allow 
 `horst` to change the channel because that would disrupt connectivity. If you 
 want `horst` to be able to change channels (`horst -s` or `channel_scan` 
-option) you need to have only monitor interfaces. This is how you usually set 
-an existing interface to monitor mode and a specific channel:
+option, or setting a channel manually in the `horst` UI) you need to set the main
+interface to monitor mode. This is how it is usually done:
 
+	ifconfig wlan0 down
 	iw wlan0 set type monitor
+
+Optionally you could also set an initial channel, and it sometimes may be necessary
+to unblock the interface first:
+
+	rfkill unblock all
 	ifconfig wlan0 up
 	iw wlan0 set channel 6
+
+If you still have to use the deprecated WEXT interface can put the interface into
+monitor mode with `iwconfig wlan0 mode monitor channel X`).
 
 Usually you have to start `horst` as root:
 

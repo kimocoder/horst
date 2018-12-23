@@ -24,6 +24,7 @@
 
 #include <uwifi/util.h>
 #include <uwifi/wlan_util.h>
+#include <uwifi/log.h>
 
 #include "main.h"
 #include "hutil.h"
@@ -43,7 +44,7 @@ static bool conf_quiet(__attribute__((unused)) const char* value) {
 	return true;
 }
 
-#if DO_DEBUG
+#if DEBUG
 static bool conf_debug(__attribute__((unused)) const char* value) {
 	conf.debug = 1;
 	return true;
@@ -201,7 +202,7 @@ static bool conf_control_pipe(const char* value) {
 static bool conf_filter_mac(const char* value) {
 	static int n;
 	if (n >= MAX_FILTERMAC) {
-		printlog(LOG_ERR, "Can only handle %d MAC filters", MAX_FILTERMAC);
+		LOG_ERR("Can only handle %d MAC filters", MAX_FILTERMAC);
 		return false;
 	}
 
@@ -228,8 +229,6 @@ static bool conf_filter_mode(const char* value) {
 		conf.filter_mode |= WLAN_MODE_STA;
 	else if (strcmp(value, "ADH") == 0 || strcmp(value, "IBSS") == 0)
 		conf.filter_mode |= WLAN_MODE_IBSS;
-	else if (strcmp(value, "PRB") == 0)
-		conf.filter_mode |= WLAN_MODE_PROBE;
 	else if (strcmp(value, "WDS") == 0)
 		conf.filter_mode |= WLAN_MODE_4ADDR;
 	else if (strcmp(value, "UNKNOWN") == 0)
@@ -303,7 +302,7 @@ static bool conf_mac_names(const char* value) {
 static struct conf_option conf_options[] = {
 	/* C , NAME        VALUE REQUIRED, DEFAULT	CALLBACK */
 	{ 'q', "quiet",			0, NULL,	conf_quiet },		// NOT dynamic
-#if DO_DEBUG
+#if DEBUG
 	{ 'D', "debug", 		0, NULL,	conf_debug },		// NOT dynamic
 #endif
 	{ 'i', "interface", 		1, "wlan0",	conf_interface },	// NOT dynamic
@@ -356,9 +355,9 @@ bool config_handle_option(int c, const char* name, const char* value)
 		     conf_options[i].func != NULL) {
 			if (!conf.quiet) {
 				if (value != NULL)
-					printlog(LOG_INFO, "Set '%s' = '%s'", conf_options[i].name, value);
+					LOG_INF("Set '%s' = '%s'", conf_options[i].name, value);
 				else
-					printlog(LOG_INFO, "Set '%s'", conf_options[i].name);
+					LOG_INF("Set '%s'", conf_options[i].name);
 			}
 			if (value != NULL) {
 				/* split list values and call function multiple times */
@@ -373,7 +372,7 @@ bool config_handle_option(int c, const char* name, const char* value)
 		}
 	}
 	if (name != NULL)
-		printlog(LOG_INFO, "Ignoring unknown config option '%s' = '%s'", name, value);
+		LOG_INF("Ignoring unknown config option '%s' = '%s'", name, value);
 	return false;
 }
 
@@ -387,7 +386,7 @@ static void config_read_file(const char* filename)
 	int linenum = 0;
 
 	if ((fp = fopen(filename, "r")) == NULL) {
-		printlog(LOG_ERR, "Could not open config file '%s'", filename);
+		LOG_ERR("Could not open config file '%s'", filename);
 		return;
 	}
 
@@ -402,7 +401,7 @@ static void config_read_file(const char* filename)
 		if (n < 0) { // empty line
 			continue;
 		} else if (n == 0) {
-			printlog(LOG_ERR, "Config file has garbage on line %d, "
+			LOG_ERR("Config file has garbage on line %d, "
 				 "ignoring the line.", linenum);
 			continue;
 		} else if (n == 1) { // no value
@@ -448,7 +447,7 @@ static char* config_get_getopt_string(char* buf, size_t maxlen, const char* add)
 		if (pos < maxlen && (maxlen - pos) >= strlen(add))
 			strncat(buf, add, (maxlen - pos));
 		else {
-			printlog(LOG_ERR, "Not enough space for getopt string!");
+			LOG_ERR("Not enough space for getopt string!");
 			exit(1);
 		}
 	}
@@ -466,7 +465,7 @@ static void print_usage(const char* name)
 		"  -v\t\tshow version\n"
 		"  -h\t\tHelp\n"
 		"  -q\t\tQuiet, no output\n"
-#if DO_DEBUG
+#if DEBUG
 		"  -D\t\tShow lots of debug output, no UI\n"
 #endif
 		"  -a\t\tAlways add virtual monitor interface\n"
@@ -523,12 +522,11 @@ void config_parse_file_and_cmdline(int argc, char** argv)
 	while ((c = getopt(argc, argv, getopt_str)) > 0) {
 		switch (c) {
 		case 'c':
-			printlog(LOG_INFO, "Using config file '%s'", optarg);
+			LOG_INF("Using config file '%s'", optarg);
 			conf_filename = optarg;
 			break;
 		case 'v':
-			printf("%s using libuwifi %s (build date: %s %s)\n",
-			       VERSION, UWIFI_VERSION, __DATE__, __TIME__);
+			printf("%s using libuwifi %s\n", VERSION, UWIFI_VERSION);
 			exit(0);
 		case 'h':
 		case '?':
